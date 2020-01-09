@@ -26,6 +26,7 @@ class DataownerWorker(WebsocketServerWorker):
         hook,
         host: str,
         port: int,
+        cookie: str,
         secure: bool = False,
         id: Union[int, str] = 0,
         log_msgs: bool = False,
@@ -34,10 +35,11 @@ class DataownerWorker(WebsocketServerWorker):
         loop = None,
         cert_path: str = None,
         key_path: str = None,
-        set_local_worker = True
+        set_local_worker: bool = True,
     ):
         super().__init__(hook, host, port, id, log_msgs, verbose, data, loop, cert_path, key_path)
 
+        self.cookie = cookie
         self.secure = secure
 
         self.connect()
@@ -50,7 +52,7 @@ class DataownerWorker(WebsocketServerWorker):
         return f"wss://{self.host}:{self.port}/share" if self.secure else f"ws://{self.host}:{self.port}/share"
 
     def connect(self):
-        args = {"max_size": None, "timeout": TIMEOUT_INTERVAL, "url": self.url, "cookie": f"320984,{self.id}"}
+        args = {"max_size": None, "timeout": TIMEOUT_INTERVAL, "url": self.url, "cookie": f"{self.cookie},{self.id}"}
 
         if self.secure:
             args["sslopt"] = {"cert_reqs": ssl.CERT_NONE}
@@ -164,6 +166,11 @@ class DataownerWorker(WebsocketServerWorker):
 
 
 class DataownerWorkerFromClient(WebsocketClientWorker):
+    def __init__(self, *args, cookie, **kwargs):
+        self.cookie = cookie
+
+        super().__init__(*args, **kwargs)
+
     def start(self):
         print("listening")
         while True:
@@ -195,7 +202,7 @@ class DataownerWorkerFromClient(WebsocketClientWorker):
         return f"wss://{self.host}:{self.port}/share" if self.secure else f"ws://{self.host}:{self.port}/share"
 
     def connect(self):
-        args = {"max_size": None, "timeout": TIMEOUT_INTERVAL, "url": self.url, "cookie": f"320984,{self.id}"}
+        args = {"max_size": None, "timeout": TIMEOUT_INTERVAL, "url": self.url, "cookie": f"{self.cookie},{self.id}"}
 
         if self.secure:
             args["sslopt"] = {"cert_reqs": ssl.CERT_NONE}

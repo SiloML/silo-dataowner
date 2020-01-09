@@ -7,14 +7,38 @@ import torch
 import sys
 import numpy as np
 from torchvision import datasets, transforms
+import requests
 
 from dataowner_worker import DataownerWorker
 
+FIREBASE_URL = "https://us-central1-silo-ml.cloudfunctions.net/"
 PROXY_URL = "127.0.0.1"
 PROXY_PORT = 8888
-VERBOSE = False
+VERBOSE = True
+DATASET_ID = sys.argv[-1]
+print(f"requesting dataset ID {DATASET_ID}")
 
 hook = sy.TorchHook(torch)
+
+resp = requests.get(FIREBASE_URL + f"registerDevice?dataset_id={DATASET_ID}")
+if resp.status_code == 400:
+	sys.exit("dataset ID does not exist")
+elif resp.status_code != 200:
+	sys.exit(f"something went wrong and we don't know what, {resp}")
+
+otp = input("Get OTP from GUI and enter here: ")
+
+resp = requests.get(FIREBASE_URL + f"verifyOwnerOTP?otp={otp}&dataset_id={DATASET_ID}")
+if resp.status_code == 400:
+	sys.exit("wrong OTP")
+elif resp.status_code == 200:
+	print("got it!")
+else:
+	sys.exit(f"something went wrong and we don't know what, {resp}")
+
+connection_token = resp.text
+# print(connection_token)
+
 
 # features = torch.Tensor(np.loadtxt("features.csv", delimiter = ","))
 # labels = torch.Tensor(np.loadtxt("labels.csv", delimiter = ","))
@@ -35,7 +59,7 @@ print(features.shape)
 # labels = torch.Tensor([0, 1, 1, 0])
 dataset = sy.BaseDataset(features, labels)
 
-dataowner = DataownerWorker(hook, PROXY_URL, PROXY_PORT, verbose = VERBOSE, id = "researcher" if len(sys.argv) == 1 else sys.argv[-1])
+dataowner = DataownerWorker(hook, PROXY_URL, PROXY_PORT, connection_token, verbose = VERBOSE, id = "researcher" if len(sys.argv) == 1 else sys.argv[-1])
 # hook.local_worker = dataowner
 print(hook.local_worker)
 dataowner.register_obj(features, b"data")
