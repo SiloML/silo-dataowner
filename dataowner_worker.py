@@ -31,7 +31,7 @@ class DataownerWorker(WebsocketServerWorker):
         log_msgs: bool = False,
         verbose: bool = False,
         data: List[Union[torch.Tensor, AbstractTensor]] = None,
-        loop=None,
+        loop = None,
         cert_path: str = None,
         key_path: str = None,
         set_local_worker = True
@@ -66,15 +66,20 @@ class DataownerWorker(WebsocketServerWorker):
         while True:
             message = self.ws.recv()
             message = binascii.unhexlify(message[2:-1])
-            response = self._recv_msg(message)
+            try:
+                response = self._recv_msg(message)
+            except:
+                print(message)
+                # continue
+                raise
             response = str(binascii.hexlify(response))
             self.ws.send(response)
 
     def search(self, key):
-        print("GOT A SEARCH REQUEST")
-        print(key)
+        # print("GOT A SEARCH REQUEST")
+        # print(key)
         # print(kwargs)
-        print(self._objects)
+        # print(self._objects)
         obj = self._objects[key]
         ptr = obj.create_pointer(garbage_collect_data=False, owner=sy.local_worker).wrap()
         # print(obj)
@@ -84,6 +89,20 @@ class DataownerWorker(WebsocketServerWorker):
     def test_hello_world(self):
         print("hello world")
         return True
+
+    def _print_objects(self):
+        print(self._objects)
+        return True
+
+    def remove_all_but_data(self):
+        wanted_labels = {b'data', b'targets'}
+        n = 0
+        for key in tuple(self._objects.keys()):
+            if key not in wanted_labels:
+                self.de_register_obj(self._objects[key])
+                n += 1
+
+        return n
 
     # def get_dataset(self):
 
