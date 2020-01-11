@@ -8,6 +8,7 @@ import sys
 import numpy as np
 from torchvision import datasets, transforms
 import requests
+import websocket
 
 from dataowner_worker import DataownerWorker
 
@@ -70,4 +71,9 @@ labels.owner = dataowner
 # dataowner.load_data([features, labels], obj_id = ["features", "labels"])
 print(dataowner)
 # dataowner.id = 'me'
-dataowner.start()
+
+try:
+	dataowner.start()
+except websocket._exceptions.WebSocketConnectionClosedException:
+	requests.get(FIREBASE_URL + f"disconnectDevice?dataset_id={DATASET_ID}")
+	print("Something went wrong with the proxy server, exiting")
